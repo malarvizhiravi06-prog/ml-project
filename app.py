@@ -101,7 +101,7 @@ if st.button("🔍 Predict"):
         level = "High"
 
     # -------------------------
-    # RAW INPUT (FIXED)
+    # INPUT DATA (BASE 8)
     # -------------------------
     input_data = [
         1 if Gender == "Male" else 0,
@@ -115,42 +115,55 @@ if st.button("🔍 Predict"):
     ]
 
     # -------------------------
-    # FORCE EXACT SIZE
+    # MATCH SCALER (16 FEATURES)
     # -------------------------
     arr = np.array(input_data)
 
-    # Trim or pad to match scaler
-    arr = arr[:scaler.n_features_in_]
     if len(arr) < scaler.n_features_in_:
         arr = np.pad(arr, (0, scaler.n_features_in_ - len(arr)))
+    else:
+        arr = arr[:scaler.n_features_in_]
 
-   df = arr.reshape(1, -1)
+    df = arr.reshape(1, -1)
 
-# SCALE FIRST (16 features)
-df_scaled = scaler.transform(df)
-
-# 🚨 THEN FIX FOR MODEL (17 features)
-if df_scaled.shape[1] < model_class.n_features_in_:
-    df_scaled = np.pad(
-        df_scaled,
-        ((0, 0), (0, model_class.n_features_in_ - df_scaled.shape[1])),
-        mode='constant'
-    )
+    # -------------------------
+    # SCALE (16 FEATURES)
+    # -------------------------
+    try:
+        df_scaled = scaler.transform(df)
+    except Exception as e:
         st.error(f"Scaling failed: {e}")
         st.stop()
 
     # -------------------------
+    # MATCH MODEL (17 FEATURES)
+    # -------------------------
+    if df_scaled.shape[1] < model_class.n_features_in_:
+        df_scaled = np.pad(
+            df_scaled,
+            ((0, 0), (0, model_class.n_features_in_ - df_scaled.shape[1])),
+            mode='constant'
+        )
+
+    # -------------------------
     # PREDICTION
     # -------------------------
-    pred = model_class.predict(df_scaled)[0]
-    prob = model_class.predict_proba(df_scaled)[0][1]
+    try:
+        pred = model_class.predict(df_scaled)[0]
+        prob = model_class.predict_proba(df_scaled)[0][1]
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
+        st.stop()
 
     st.header("📊 Results")
 
     if pred == 1:
         st.success("Loan Approved ✅")
-        amount = model_reg.predict(df_scaled)[0]
-        st.metric("Estimated Loan Amount", f"{amount:.2f}")
+        try:
+            amount = model_reg.predict(df_scaled)[0]
+            st.metric("Estimated Loan Amount", f"{amount:.2f}")
+        except:
+            pass
     else:
         st.error("Loan Rejected ❌")
 
@@ -173,40 +186,6 @@ if df_scaled.shape[1] < model_class.n_features_in_:
         st.warning("Moderate risk")
     else:
         st.success("Low risk")
-
-    # -------------------------
-    # RECOMMENDATIONS
-    # -------------------------
-    st.subheader("💡 Recommendations")
-
-    if level == "Low":
-        st.write("- Improve budgeting")
-        st.write("- Learn loan basics")
-    elif level == "Medium":
-        st.write("- Improve planning")
-    else:
-        st.write("- Maintain discipline")
-
-    # -------------------------
-    # REASONS
-    # -------------------------
-    if pred == 0:
-        st.subheader("❗ Possible Reasons")
-
-        reasons = []
-
-        if Credit_History == 0:
-            reasons.append("Poor credit history")
-        if ApplicantIncome < 3000:
-            reasons.append("Low income")
-        if LoanAmount > ApplicantIncome:
-            reasons.append("High loan burden")
-
-        if len(reasons) == 0:
-            st.write("General financial risk")
-        else:
-            for r in reasons:
-                st.write("-", r)
 
     # -------------------------
     # CHART
