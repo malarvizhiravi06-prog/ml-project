@@ -1,6 +1,6 @@
 import streamlit as st
-import pandas as pd
 import pickle
+import numpy as np
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Financial Decision System", layout="wide")
@@ -8,7 +8,7 @@ st.set_page_config(page_title="Financial Decision System", layout="wide")
 st.title("📊 Financial Decision Support System")
 
 # -------------------------
-# LOAD FILES
+# LOAD MODELS
 # -------------------------
 try:
     model_class = pickle.load(open('model_class.pkl', 'rb'))
@@ -16,7 +16,7 @@ try:
     scaler = pickle.load(open('scaler.pkl', 'rb'))
     st.success("Models Loaded Successfully ✅")
 except Exception as e:
-    st.error(f"Error loading files: {e}")
+    st.error(f"Error loading models: {e}")
     st.stop()
 
 # -------------------------
@@ -101,7 +101,7 @@ if st.button("🔍 Predict"):
         level = "High"
 
     # -------------------------
-    # SIMPLE INPUT (FINAL FIX)
+    # RAW INPUT (FIXED)
     # -------------------------
     input_data = [
         1 if Gender == "Male" else 0,
@@ -114,11 +114,17 @@ if st.button("🔍 Predict"):
         Credit_History
     ]
 
-    # Fill remaining features to match scaler
-    while len(input_data) < scaler.n_features_in_:
-        input_data.append(0)
+    # -------------------------
+    # FORCE EXACT SIZE
+    # -------------------------
+    arr = np.array(input_data)
 
-    df = pd.DataFrame([input_data])
+    # Trim or pad to match scaler
+    arr = arr[:scaler.n_features_in_]
+    if len(arr) < scaler.n_features_in_:
+        arr = np.pad(arr, (0, scaler.n_features_in_ - len(arr)))
+
+    df = arr.reshape(1, -1)
 
     # -------------------------
     # SCALING
