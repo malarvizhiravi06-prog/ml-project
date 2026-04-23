@@ -101,7 +101,7 @@ if st.button("🔍 Predict"):
         level = "High"
 
     # -------------------------
-    # INPUT DATA (BASE 8)
+    # INPUT DATA (BASE)
     # -------------------------
     input_data = [
         1 if Gender == "Male" else 0,
@@ -115,7 +115,7 @@ if st.button("🔍 Predict"):
     ]
 
     # -------------------------
-    # MATCH SCALER (16 FEATURES)
+    # MATCH SCALER (16)
     # -------------------------
     arr = np.array(input_data)
 
@@ -127,7 +127,7 @@ if st.button("🔍 Predict"):
     df = arr.reshape(1, -1)
 
     # -------------------------
-    # SCALE (16 FEATURES)
+    # SCALE
     # -------------------------
     try:
         df_scaled = scaler.transform(df)
@@ -136,7 +136,7 @@ if st.button("🔍 Predict"):
         st.stop()
 
     # -------------------------
-    # MATCH MODEL (17 FEATURES)
+    # MATCH MODEL (17)
     # -------------------------
     if df_scaled.shape[1] < model_class.n_features_in_:
         df_scaled = np.pad(
@@ -168,6 +168,29 @@ if st.button("🔍 Predict"):
         st.error("Loan Rejected ❌")
 
     st.write(f"Approval Probability: {prob*100:.2f}%")
+
+    # -------------------------
+    # REASONS (SAFE ADD)
+    # -------------------------
+    if pred == 0:
+        st.subheader("❗ Possible Reasons")
+
+        reasons = []
+
+        if Credit_History == 0:
+            reasons.append("Poor credit history")
+
+        if ApplicantIncome < 3000:
+            reasons.append("Low income")
+
+        if LoanAmount > ApplicantIncome:
+            reasons.append("High loan burden")
+
+        if len(reasons) == 0:
+            st.write("General financial risk based on model")
+        else:
+            for r in reasons:
+                st.write("-", r)
 
     # -------------------------
     # LITERACY OUTPUT
