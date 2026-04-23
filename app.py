@@ -42,7 +42,7 @@ col3, col4 = st.columns(2)
 
 with col3:
     ApplicantIncome = st.number_input("Applicant Income", 0)
-    LoanAmount = st.number_input("Loan Amount", 0)  # UI only
+    LoanAmount = st.number_input("Loan Amount", 0)
 
 with col4:
     CoapplicantIncome = st.number_input("Coapplicant Income", 0)
@@ -102,7 +102,7 @@ if st.button("🔍 Predict"):
         level = "High"
 
     # -------------------------
-    # SAFE DATA CREATION
+    # DATA CREATION
     # -------------------------
     data = {col: 0 for col in columns}
 
@@ -139,20 +139,16 @@ if st.button("🔍 Predict"):
         df['Cluster'] = 1
 
     # -------------------------
-    # ALIGN DATA
+    # ALIGN DATA (VERY IMPORTANT)
     # -------------------------
     df = df.reindex(columns=columns)
     df = df.fillna(0)
 
-    # 🚨 FINAL FIX: REMOVE LOANAMOUNT IF PRESENT
-    if 'LoanAmount' in df.columns:
-        df = df.drop('LoanAmount', axis=1)
-
     # -------------------------
-    # SCALING
+    # SCALING (FINAL FIX)
     # -------------------------
     try:
-        df_scaled = scaler.transform(df)
+        df_scaled = scaler.transform(df.values)   # 🔥 KEY LINE
     except Exception as e:
         st.error(f"Scaling failed: {e}")
         st.stop()
