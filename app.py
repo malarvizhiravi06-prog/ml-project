@@ -42,7 +42,7 @@ col3, col4 = st.columns(2)
 
 with col3:
     ApplicantIncome = st.number_input("Applicant Income", 0)
-    LoanAmount = st.number_input("Loan Amount", 0)
+    LoanAmount = st.number_input("Loan Amount", 0)  # UI only
 
 with col4:
     CoapplicantIncome = st.number_input("Coapplicant Income", 0)
@@ -102,7 +102,7 @@ if st.button("🔍 Predict"):
         level = "High"
 
     # -------------------------
-    # DATA CREATION
+    # DATA CREATION (STRICT)
     # -------------------------
     data = {col: 0 for col in columns}
 
@@ -120,35 +120,17 @@ if st.button("🔍 Predict"):
     df = pd.DataFrame([data])
 
     # -------------------------
-    # FEATURE ENGINEERING
-    # -------------------------
-    if 'Income_Total' in df.columns:
-        df['Income_Total'] = ApplicantIncome + CoapplicantIncome
-
-    if 'Loan_Income_Ratio' in df.columns:
-        total_income = ApplicantIncome + CoapplicantIncome
-        df['Loan_Income_Ratio'] = LoanAmount / (total_income + 1)
-
-    if 'Income_Percentile' in df.columns:
-        df['Income_Percentile'] = 2
-
-    if 'Loan_Percentile' in df.columns:
-        df['Loan_Percentile'] = 2
-
-    if 'Cluster' in df.columns:
-        df['Cluster'] = 1
-
-    # -------------------------
-    # ALIGN DATA (VERY IMPORTANT)
+    # FORCE EXACT MATCH (CRITICAL)
     # -------------------------
     df = df.reindex(columns=columns)
+    df = df.loc[:, columns]
     df = df.fillna(0)
 
     # -------------------------
-    # SCALING (FINAL FIX)
+    # SCALING
     # -------------------------
     try:
-        df_scaled = scaler.transform(df.values)   # 🔥 KEY LINE
+        df_scaled = scaler.transform(df.values)
     except Exception as e:
         st.error(f"Scaling failed: {e}")
         st.stop()
