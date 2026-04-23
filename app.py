@@ -42,7 +42,7 @@ col3, col4 = st.columns(2)
 
 with col3:
     ApplicantIncome = st.number_input("Applicant Income", 0)
-    LoanAmount = st.number_input("Loan Amount", 0)
+    LoanAmount = st.number_input("Loan Amount", 0)  # UI only
 
 with col4:
     CoapplicantIncome = st.number_input("Coapplicant Income", 0)
@@ -102,7 +102,7 @@ if st.button("🔍 Predict"):
         level = "High"
 
     # -------------------------
-    # CREATE DATA (SAFE WAY)
+    # SAFE DATA CREATION
     # -------------------------
     data = {col: 0 for col in columns}
 
@@ -120,13 +120,14 @@ if st.button("🔍 Predict"):
     df = pd.DataFrame([data])
 
     # -------------------------
-    # FEATURE ENGINEERING (ONLY IF EXISTS)
+    # FEATURE ENGINEERING (SAFE)
     # -------------------------
     if 'Income_Total' in df.columns:
         df['Income_Total'] = ApplicantIncome + CoapplicantIncome
 
     if 'Loan_Income_Ratio' in df.columns:
-        df['Loan_Income_Ratio'] = LoanAmount / (ApplicantIncome + CoapplicantIncome + 1)
+        total_income = ApplicantIncome + CoapplicantIncome
+        df['Loan_Income_Ratio'] = LoanAmount / (total_income + 1)
 
     if 'Income_Percentile' in df.columns:
         df['Income_Percentile'] = 2
@@ -138,24 +139,18 @@ if st.button("🔍 Predict"):
         df['Cluster'] = 1
 
     # -------------------------
-    # ALIGN DATA
+    # FORCE EXACT MATCH
     # -------------------------
-    df = df.reindex(columns=columns)
+    df = df[columns]
     df = df.fillna(0)
 
     # -------------------------
-    # SCALE
+    # SCALING
     # -------------------------
-    df_scaled = None
-
     try:
         df_scaled = scaler.transform(df)
     except Exception as e:
         st.error(f"Scaling failed: {e}")
-        st.stop()
-
-    if df_scaled is None:
-        st.error("Scaling failed. Cannot proceed.")
         st.stop()
 
     # -------------------------
@@ -179,7 +174,6 @@ if st.button("🔍 Predict"):
     # LITERACY OUTPUT
     # -------------------------
     st.subheader("🧠 Literacy Score")
-
     st.write(f"{literacy_score:.2f} / 100 ({level})")
 
     # -------------------------
@@ -237,9 +231,5 @@ if st.button("🔍 Predict"):
     ax.bar(["Score"], [literacy_score])
     ax.set_ylim(0, 100)
     st.pyplot(fig)
-
-   
-
-
 
 
