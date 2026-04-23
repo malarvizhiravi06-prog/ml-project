@@ -8,20 +8,20 @@ st.set_page_config(page_title="Financial Decision System", layout="wide")
 st.title("📊 Financial Decision Support System")
 
 # -------------------------
-# LOAD MODELS
+# LOAD FILES
 # -------------------------
 try:
     model_class = pickle.load(open('model_class.pkl', 'rb'))
     model_reg = pickle.load(open('model_reg.pkl', 'rb'))
     scaler = pickle.load(open('scaler.pkl', 'rb'))
     columns = pickle.load(open('columns.pkl', 'rb'))
-    st.success("Models loaded successfully ✅")
-except:
-    st.error("Error loading model files")
+    st.success("Models Loaded Successfully ✅")
+except Exception as e:
+    st.error(f"Error loading files: {e}")
     st.stop()
 
 # -------------------------
-# INPUT SECTION
+# INPUTS
 # -------------------------
 st.header("👤 Applicant Details")
 
@@ -54,14 +54,14 @@ Credit_History = 1 if credit == "Good" else 0
 # -------------------------
 # LITERACY QUESTIONS
 # -------------------------
-st.header("🧠 Financial Literacy Assessment")
+st.header("🧠 Financial Literacy")
 
 questions = [
-    "Do you assess repayment ability before taking loan?",
-    "Do you track expenses regularly?",
+    "Do you assess repayment ability before loan?",
+    "Do you track expenses?",
     "Do you understand interest rates?",
-    "Do you evaluate financial risks?",
-    "Do you plan finances for future?",
+    "Do you evaluate risks?",
+    "Do you plan finances?",
     "Do you understand investments?",
     "Do you repay dues on time?"
 ]
@@ -72,12 +72,12 @@ for q in questions:
     answers.append(ans)
 
 bad_decision = st.radio(
-    "Do you make financial decisions without proper analysis?",
+    "Do you make financial decisions without analysis?",
     ["Yes", "No"], horizontal=True
 )
 
 # -------------------------
-# PREDICTION
+# PREDICT
 # -------------------------
 if st.button("🔍 Predict"):
 
@@ -102,108 +102,115 @@ if st.button("🔍 Predict"):
         level = "High"
 
     # -------------------------
-    # MODEL INPUT
+    # CREATE DATA (SAFE WAY)
     # -------------------------
-    data = {
+    data = {col: 0 for col in columns}
+
+    data.update({
         'Gender': 1 if Gender == "Male" else 0,
         'Married': 1 if Married == "Yes" else 0,
         'Dependents': int(Dependents.replace("+", "")),
         'Education': 1 if Education == "Graduate" else 0,
         'ApplicantIncome': ApplicantIncome,
         'CoapplicantIncome': CoapplicantIncome,
-        'LoanAmount': LoanAmount,
         'Loan_Amount_Term': Loan_Amount_Term,
-        'Credit_History': Credit_History,
-        'Property_Area': 1
-    }
+        'Credit_History': Credit_History
+    })
 
     df = pd.DataFrame([data])
 
-    # Feature Engineering
-    df['Income_Total'] = ApplicantIncome + CoapplicantIncome
-    df['Loan_Income_Ratio'] = LoanAmount / (df['Income_Total'] + 1)
-    df['Income_Percentile'] = 2
-    df['Loan_Percentile'] = 2
-    df['Cluster'] = 1
+    # -------------------------
+    # FEATURE ENGINEERING (ONLY IF EXISTS)
+    # -------------------------
+    if 'Income_Total' in df.columns:
+        df['Income_Total'] = ApplicantIncome + CoapplicantIncome
 
-# -------------------------
-# DATA ALIGNMENT
-# -------------------------
-df = df.reindex(columns=columns)
-df = df.fillna(0)
+    if 'Loan_Income_Ratio' in df.columns:
+        df['Loan_Income_Ratio'] = LoanAmount / (ApplicantIncome + CoapplicantIncome + 1)
 
-# -------------------------
-# SCALING
-# -------------------------
-df_scaled = None
+    if 'Income_Percentile' in df.columns:
+        df['Income_Percentile'] = 2
 
-try:
-    df_scaled = scaler.transform(df)
-except Exception as e:
-    st.error(f"Scaling failed: {e}")
-    st.stop()
+    if 'Loan_Percentile' in df.columns:
+        df['Loan_Percentile'] = 2
 
-# -------------------------
-# SAFETY CHECK
-# -------------------------
-if df_scaled is None:
-    st.error("Scaling failed. Cannot proceed.")
-    st.stop()
+    if 'Cluster' in df.columns:
+        df['Cluster'] = 1
 
-# -------------------------
-# MODEL OUTPUT
-# -------------------------
-pred = model_class.predict(df_scaled)[0]
-prob = model_class.predict_proba(df_scaled)[0][1]
+    # -------------------------
+    # ALIGN DATA
+    # -------------------------
+    df = df.reindex(columns=columns)
+    df = df.fillna(0)
 
-st.header("📊 Results")
+    # -------------------------
+    # SCALE
+    # -------------------------
+    df_scaled = None
 
-if pred == 1:
+    try:
+        df_scaled = scaler.transform(df)
+    except Exception as e:
+        st.error(f"Scaling failed: {e}")
+        st.stop()
+
+    if df_scaled is None:
+        st.error("Scaling failed. Cannot proceed.")
+        st.stop()
+
+    # -------------------------
+    # PREDICTION
+    # -------------------------
+    pred = model_class.predict(df_scaled)[0]
+    prob = model_class.predict_proba(df_scaled)[0][1]
+
+    st.header("📊 Results")
+
+    if pred == 1:
         st.success("Loan Approved ✅")
         amount = model_reg.predict(df_scaled)[0]
-        st.metric("Predicted Loan Amount", f"{amount:.2f}")
-else:
+        st.metric("Estimated Loan Amount", f"{amount:.2f}")
+    else:
         st.error("Loan Rejected ❌")
 
-st.write(f"Approval Probability: {prob*100:.2f}%")
+    st.write(f"Approval Probability: {prob*100:.2f}%")
 
     # -------------------------
     # LITERACY OUTPUT
     # -------------------------
-st.subheader("🧠 Financial Literacy")
+    st.subheader("🧠 Literacy Score")
 
-st.write(f"Score: {literacy_score:.2f}/100")
-st.write(f"Level: {level}")
+    st.write(f"{literacy_score:.2f} / 100 ({level})")
 
     # -------------------------
     # RISK
     # -------------------------
-st.subheader("⚠️ Risk Interpretation")
+    st.subheader("⚠️ Risk Interpretation")
 
-if level == "Low":
-        st.error("High behavioural risk due to low financial awareness.")
-elif level == "Medium":
-        st.warning("Moderate financial awareness with some risks.")
-else:
-        st.success("Low behavioural risk with good financial understanding.")
+    if level == "Low":
+        st.error("High financial risk")
+    elif level == "Medium":
+        st.warning("Moderate risk")
+    else:
+        st.success("Low risk")
 
     # -------------------------
     # RECOMMENDATIONS
     # -------------------------
-st.subheader("💡 Recommendations")
+    st.subheader("💡 Recommendations")
 
-if level == "Low":
-        st.write("- Improve budgeting and expense tracking")
-        st.write("- Understand loan repayment obligations")
-elif level == "Medium":
-        st.write("- Improve financial planning and risk assessment")
-else:
-        st.write("- Maintain strong financial discipline")
+    if level == "Low":
+        st.write("- Improve budgeting")
+        st.write("- Learn loan basics")
+    elif level == "Medium":
+        st.write("- Improve planning")
+    else:
+        st.write("- Maintain discipline")
 
     # -------------------------
     # REASONS
     # -------------------------
-if pred == 0:
+    if pred == 0:
         st.subheader("❗ Possible Reasons")
 
         reasons = []
@@ -215,15 +222,24 @@ if pred == 0:
         if LoanAmount > ApplicantIncome:
             reasons.append("High loan burden")
 
-        for r in reasons:
-            st.write("-", r)
+        if len(reasons) == 0:
+            st.write("General financial risk")
+        else:
+            for r in reasons:
+                st.write("-", r)
 
     # -------------------------
     # CHART
     # -------------------------
-st.subheader("📊 Literacy Score Visualization")
+    st.subheader("📊 Literacy Score Chart")
 
-fig, ax = plt.subplots()
-ax.bar(["Score"], [literacy_score])
-ax.set_ylim(0, 100)
-st.pyplot(fig)
+    fig, ax = plt.subplots()
+    ax.bar(["Score"], [literacy_score])
+    ax.set_ylim(0, 100)
+    st.pyplot(fig)
+
+   
+
+
+
+
