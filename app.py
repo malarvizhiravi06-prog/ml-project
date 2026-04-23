@@ -126,63 +126,84 @@ if st.button("🔍 Predict"):
     df['Loan_Percentile'] = 2
     df['Cluster'] = 1
 
-    df = df.reindex(columns=columns, fill_value=0)
+# -------------------------
+# DATA ALIGNMENT
+# -------------------------
+df = df.reindex(columns=columns)
+df = df.fillna(0)
+
+# -------------------------
+# SCALING
+# -------------------------
+df_scaled = None
+
+try:
     df_scaled = scaler.transform(df)
+except Exception as e:
+    st.error(f"Scaling failed: {e}")
+    st.stop()
 
-    # -------------------------
-    # MODEL OUTPUT
-    # -------------------------
-    pred = model_class.predict(df_scaled)[0]
-    prob = model_class.predict_proba(df_scaled)[0][1]
+# -------------------------
+# SAFETY CHECK
+# -------------------------
+if df_scaled is None:
+    st.error("Scaling failed. Cannot proceed.")
+    st.stop()
 
-    st.header("📊 Results")
+# -------------------------
+# MODEL OUTPUT
+# -------------------------
+pred = model_class.predict(df_scaled)[0]
+prob = model_class.predict_proba(df_scaled)[0][1]
 
-    if pred == 1:
+st.header("📊 Results")
+
+if pred == 1:
         st.success("Loan Approved ✅")
         amount = model_reg.predict(df_scaled)[0]
         st.metric("Predicted Loan Amount", f"{amount:.2f}")
-    else:
+else:
         st.error("Loan Rejected ❌")
 
-    st.write(f"Approval Probability: {prob*100:.2f}%")
+st.write(f"Approval Probability: {prob*100:.2f}%")
 
     # -------------------------
     # LITERACY OUTPUT
     # -------------------------
-    st.subheader("🧠 Financial Literacy")
+st.subheader("🧠 Financial Literacy")
 
-    st.write(f"Score: {literacy_score:.2f}/100")
-    st.write(f"Level: {level}")
+st.write(f"Score: {literacy_score:.2f}/100")
+st.write(f"Level: {level}")
 
     # -------------------------
     # RISK
     # -------------------------
-    st.subheader("⚠️ Risk Interpretation")
+st.subheader("⚠️ Risk Interpretation")
 
-    if level == "Low":
+if level == "Low":
         st.error("High behavioural risk due to low financial awareness.")
-    elif level == "Medium":
+elif level == "Medium":
         st.warning("Moderate financial awareness with some risks.")
-    else:
+else:
         st.success("Low behavioural risk with good financial understanding.")
 
     # -------------------------
     # RECOMMENDATIONS
     # -------------------------
-    st.subheader("💡 Recommendations")
+st.subheader("💡 Recommendations")
 
-    if level == "Low":
+if level == "Low":
         st.write("- Improve budgeting and expense tracking")
         st.write("- Understand loan repayment obligations")
-    elif level == "Medium":
+elif level == "Medium":
         st.write("- Improve financial planning and risk assessment")
-    else:
+else:
         st.write("- Maintain strong financial discipline")
 
     # -------------------------
     # REASONS
     # -------------------------
-    if pred == 0:
+if pred == 0:
         st.subheader("❗ Possible Reasons")
 
         reasons = []
@@ -200,9 +221,9 @@ if st.button("🔍 Predict"):
     # -------------------------
     # CHART
     # -------------------------
-    st.subheader("📊 Literacy Score Visualization")
+st.subheader("📊 Literacy Score Visualization")
 
-    fig, ax = plt.subplots()
-    ax.bar(["Score"], [literacy_score])
-    ax.set_ylim(0, 100)
-    st.pyplot(fig)
+fig, ax = plt.subplots()
+ax.bar(["Score"], [literacy_score])
+ax.set_ylim(0, 100)
+st.pyplot(fig)
