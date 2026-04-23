@@ -120,7 +120,7 @@ if st.button("🔍 Predict"):
     df = pd.DataFrame([data])
 
     # -------------------------
-    # FEATURE ENGINEERING (SAFE)
+    # FEATURE ENGINEERING
     # -------------------------
     if 'Income_Total' in df.columns:
         df['Income_Total'] = ApplicantIncome + CoapplicantIncome
@@ -139,10 +139,14 @@ if st.button("🔍 Predict"):
         df['Cluster'] = 1
 
     # -------------------------
-    # FORCE EXACT MATCH
+    # ALIGN DATA
     # -------------------------
-    df = df[columns]
+    df = df.reindex(columns=columns)
     df = df.fillna(0)
+
+    # 🚨 FINAL FIX: REMOVE LOANAMOUNT IF PRESENT
+    if 'LoanAmount' in df.columns:
+        df = df.drop('LoanAmount', axis=1)
 
     # -------------------------
     # SCALING
@@ -231,5 +235,3 @@ if st.button("🔍 Predict"):
     ax.bar(["Score"], [literacy_score])
     ax.set_ylim(0, 100)
     st.pyplot(fig)
-
-
