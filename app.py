@@ -14,7 +14,6 @@ try:
     model_class = pickle.load(open('model_class.pkl', 'rb'))
     model_reg = pickle.load(open('model_reg.pkl', 'rb'))
     scaler = pickle.load(open('scaler.pkl', 'rb'))
-    columns = pickle.load(open('columns.pkl', 'rb'))
     st.success("Models Loaded Successfully ✅")
 except Exception as e:
     st.error(f"Error loading files: {e}")
@@ -42,7 +41,7 @@ col3, col4 = st.columns(2)
 
 with col3:
     ApplicantIncome = st.number_input("Applicant Income", 0)
-    LoanAmount = st.number_input("Loan Amount", 0)  # UI only
+    LoanAmount = st.number_input("Loan Amount", 0)
 
 with col4:
     CoapplicantIncome = st.number_input("Coapplicant Income", 0)
@@ -102,35 +101,30 @@ if st.button("🔍 Predict"):
         level = "High"
 
     # -------------------------
-    # DATA CREATION (STRICT)
+    # SIMPLE INPUT (FINAL FIX)
     # -------------------------
-    data = {col: 0 for col in columns}
+    input_data = [
+        1 if Gender == "Male" else 0,
+        1 if Married == "Yes" else 0,
+        int(Dependents.replace("+", "")),
+        1 if Education == "Graduate" else 0,
+        ApplicantIncome,
+        CoapplicantIncome,
+        Loan_Amount_Term,
+        Credit_History
+    ]
 
-    data.update({
-        'Gender': 1 if Gender == "Male" else 0,
-        'Married': 1 if Married == "Yes" else 0,
-        'Dependents': int(Dependents.replace("+", "")),
-        'Education': 1 if Education == "Graduate" else 0,
-        'ApplicantIncome': ApplicantIncome,
-        'CoapplicantIncome': CoapplicantIncome,
-        'Loan_Amount_Term': Loan_Amount_Term,
-        'Credit_History': Credit_History
-    })
+    # Fill remaining features to match scaler
+    while len(input_data) < scaler.n_features_in_:
+        input_data.append(0)
 
-    df = pd.DataFrame([data])
-
-    # -------------------------
-    # FORCE EXACT MATCH (CRITICAL)
-    # -------------------------
-    df = df.reindex(columns=columns)
-    df = df.loc[:, columns]
-    df = df.fillna(0)
+    df = pd.DataFrame([input_data])
 
     # -------------------------
     # SCALING
     # -------------------------
     try:
-        df_scaled = scaler.transform(df.values)
+        df_scaled = scaler.transform(df)
     except Exception as e:
         st.error(f"Scaling failed: {e}")
         st.stop()
