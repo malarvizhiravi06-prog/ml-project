@@ -124,14 +124,18 @@ if st.button("🔍 Predict"):
     if len(arr) < scaler.n_features_in_:
         arr = np.pad(arr, (0, scaler.n_features_in_ - len(arr)))
 
-    df = arr.reshape(1, -1)
+   df = arr.reshape(1, -1)
 
-    # -------------------------
-    # SCALING
-    # -------------------------
-    try:
-        df_scaled = scaler.transform(df)
-    except Exception as e:
+# SCALE FIRST (16 features)
+df_scaled = scaler.transform(df)
+
+# 🚨 THEN FIX FOR MODEL (17 features)
+if df_scaled.shape[1] < model_class.n_features_in_:
+    df_scaled = np.pad(
+        df_scaled,
+        ((0, 0), (0, model_class.n_features_in_ - df_scaled.shape[1])),
+        mode='constant'
+    )
         st.error(f"Scaling failed: {e}")
         st.stop()
 
